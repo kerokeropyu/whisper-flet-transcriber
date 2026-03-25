@@ -3,8 +3,7 @@ import threading
 from typing import Callable
 import numpy as np
 import whisper
-import whisper.transcribe as whisper_transcribe
-import tqdm
+import tqdm as tqdm_module
 import sounddevice as sd
 from scipy.io.wavfile import write as write_wav
 from pathlib import Path
@@ -20,8 +19,8 @@ RECORD_DIR.mkdir(parents=True, exist_ok=True)
 # Whisper 進捗 Hook
 # ─────────────────────────────────────────
 
-class FletProgressBar(tqdm.tqdm):
-    """Whisper 内部の tqdm を乗っ取って進捗をコールバックで返す"""
+class FletProgressBar(tqdm_module.tqdm):
+    """進捗をUIコールバックで返す tqdm ラッパー"""
 
     def __init__(self, *args, ui_callback: Callable[[float], None] | None = None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,8 +34,17 @@ class FletProgressBar(tqdm.tqdm):
 
 
 def install_progress_hook(ui_callback: Callable[[float], None]) -> None:
-    """whisper.transcribe 内で使われる tqdm を差し替える"""
-    whisper_transcribe.tqdm.tqdm = lambda *a, **k: FletProgressBar(*a, ui_callback=ui_callback, **k)
+    """辺屠 tqdm をパッチして Whisper 内部の進捗を横取りする"""
+    import whisper.transcribe as _wt
+    # whisper.transcribe モジュール内の tqdm クラスを直接差し替える
+    try:
+        _wt.tqdm.tqdm = lambda *a, **k: FletProgressBar(*a, ui_callback=ui_callback, **k)
+    except AttributeError:
+        # tqdm モジュール構造が違うバージョン向けフォールバック
+        try:
+            _wt.tqdm = lambda *a, **k: FletProgressBar(*a, ui_callback=ui_callback, **k)
+        except Exception:
+            pass  # 進捗表示はスキップ、文字起こしは続行
 
 
 # ─────────────────────────────────────────
