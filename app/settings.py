@@ -12,6 +12,7 @@ DEFAULTS = {
     "temperature": 0.0,
     "translate": False,
     "initial_prompt": "",
+    "use_gpu": False,
 }
 
 
@@ -22,6 +23,7 @@ class Settings:
     temperature: float = 0.0
     translate: bool = False
     initial_prompt: str = ""
+    use_gpu: bool = False
 
     def language(self) -> str | None:
         return "ja" if self.language_mode == "ja" else None
